@@ -47,28 +47,12 @@ module.exports = {
     memoryjs.openProcess(processIdentifier, callback);
   },
 
-  getProcesses(callback) {
-    if (arguments.length === 0) {
-      return memoryjs.getProcesses();
-    }
-
-    memoryjs.getProcesses(callback);
-  },
-
   findModule(moduleName, processId, callback) {
     if (arguments.length === 2) {
       return memoryjs.findModule(moduleName, processId);
     }
 
     memoryjs.findModule(moduleName, processId, callback);
-  },
-
-  getModules(processId, callback) {
-    if (arguments.length === 1) {
-      return memoryjs.getModules(processId);
-    }
-
-    memoryjs.getModules(processId, callback);
   },
 
   readMemory(handle, address, dataType, callback) {
@@ -87,5 +71,5 @@ module.exports = {
     memoryjs.readBuffer(handle, address, size, callback);
   },
 
-  closeProcess: memoryjs.closeProcess,
+  closeProcess: memoryjs.closeProcess, // nop
 };

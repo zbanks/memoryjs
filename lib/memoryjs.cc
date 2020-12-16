@@ -35,13 +35,13 @@ Napi::Value openProcess(const Napi::CallbackInfo& args) {
   }
 
   // Define error message that may be set by the function that opens the process
-  char* errorMessage = "";
+  const char* errorMessage = "";
 
-  process::Pair pair;
+  pid_t processPid = -1;
 
   if (args[0].IsString()) {
     std::string processName(args[0].As<Napi::String>().Utf8Value());
-    pair = Process.openProcess(processName.c_str(), &errorMessage);
+    processPid = Process.openProcess(processName.c_str(), &errorMessage);
 
     // In case it failed to open, let's keep retrying
     // while(!strcmp(process.szExeFile, "")) {
@@ -50,7 +50,7 @@ Napi::Value openProcess(const Napi::CallbackInfo& args) {
   }
 
   if (args[0].IsNumber()) {
-    pair = Process.openProcess(args[0].As<Napi::Number>().Uint32Value(), &errorMessage);
+    processPid = args[0].As<Napi::Number>().Uint32Value();
 
     // In case it failed to open, let's keep retrying
     // while(!strcmp(process.szExeFile, "")) {
@@ -64,20 +64,15 @@ Napi::Value openProcess(const Napi::CallbackInfo& args) {
     Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
     return env.Null();
   }
+  if (processPid < 0) {
+    return env.Null();
+  }
 
   // Create a v8 Object (JSON) to store the process information
   Napi::Object processInfo = Napi::Object::New(env);
 
-  processInfo.Set(Napi::String::New(env, "dwSize"), Napi::Value::From(env, (int)pair.process.dwSize));
-  processInfo.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, (int)pair.process.th32ProcessID));
-  processInfo.Set(Napi::String::New(env, "cntThreads"), Napi::Value::From(env, (int)pair.process.cntThreads));
-  processInfo.Set(Napi::String::New(env, "th32ParentProcessID"), Napi::Value::From(env, (int)pair.process.th32ParentProcessID));
-  processInfo.Set(Napi::String::New(env, "pcPriClassBase"), Napi::Value::From(env, (int)pair.process.pcPriClassBase));
-  processInfo.Set(Napi::String::New(env, "szExeFile"), Napi::String::New(env, pair.process.szExeFile));
-  processInfo.Set(Napi::String::New(env, "handle"), Napi::Value::From(env, (uintptr_t)pair.handle));
-
-  DWORD64 base = module::getBaseAddress(pair.process.szExeFile, pair.process.th32ProcessID);
-  processInfo.Set(Napi::String::New(env, "modBaseAddr"), Napi::Value::From(env, (uintptr_t)base));
+  processInfo.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, processPid));
+  processInfo.Set(Napi::String::New(env, "handle"), Napi::Value::From(env, processPid));
 
   // openProcess can either take one argument or can take
   // two arguments for asychronous use (second argument is the callback)
@@ -94,137 +89,7 @@ Napi::Value openProcess(const Napi::CallbackInfo& args) {
 
 Napi::Value closeProcess(const Napi::CallbackInfo& args) {
   Napi::Env env = args.Env();
-
-  if (args.Length() != 1) {
-    Napi::Error::New(env, "requires 1 argument").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  if (!args[0].IsNumber()) {
-    Napi::Error::New(env, "first argument must be a number").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  Process.closeProcess((HANDLE)args[0].As<Napi::Number>().Int64Value());
   return env.Null();
-}
-
-Napi::Value getProcesses(const Napi::CallbackInfo& args) {
-  Napi::Env env = args.Env();
-
-  if (args.Length() > 1) {
-    Napi::Error::New(env, "requires either 0 arguments or 1 argument if a callback is being used").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  if (args.Length() == 1 && !args[0].IsFunction()) {
-    Napi::Error::New(env, "first argument must be a function").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  // Define error message that may be set by the function that gets the processes
-  char* errorMessage = "";
-
-  std::vector<PROCESSENTRY32> processEntries = Process.getProcesses(&errorMessage);
-
-  // If an error message was returned from the function that gets the processes, throw the error.
-  // Only throw an error if there is no callback (if there's a callback, the error is passed there).
-  if (strcmp(errorMessage, "") && args.Length() != 1) {
-    Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  // Creates v8 array with the size being that of the processEntries vector processes is an array of JavaScript objects
-  Napi::Array processes = Napi::Array::New(env, processEntries.size());
-
-  // Loop over all processes found
-  for (std::vector<PROCESSENTRY32>::size_type i = 0; i != processEntries.size(); i++) {
-    // Create a v8 object to store the current process' information
-    Napi::Object process = Napi::Object::New(env);
-
-    process.Set(Napi::String::New(env, "cntThreads"), Napi::Value::From(env, (int)processEntries[i].cntThreads));
-    process.Set(Napi::String::New(env, "szExeFile"), Napi::String::New(env, processEntries[i].szExeFile));
-    process.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, (int)processEntries[i].th32ProcessID));
-    process.Set(Napi::String::New(env, "th32ParentProcessID"), Napi::Value::From(env, (int)processEntries[i].th32ParentProcessID));
-    process.Set(Napi::String::New(env, "pcPriClassBase"), Napi::Value::From(env, (int)processEntries[i].pcPriClassBase));
-
-    // Push the object to the array
-    processes.Set(i, process);
-  }
-
-  /* getProcesses can either take no arguments or one argument
-     one argument is for asychronous use (the callback) */
-  if (args.Length() == 1) {
-    // Callback to let the user handle with the information
-    Napi::Function callback = args[0].As<Napi::Function>();
-    callback.Call(env.Global(), { Napi::String::New(env, errorMessage), processes });
-    return env.Null();
-  } else {
-    // return JSON
-    return processes;
-  }
-}
-
-Napi::Value getModules(const Napi::CallbackInfo& args) {
-  Napi::Env env = args.Env();
-
-  if (args.Length() != 1 && args.Length() != 2) {
-    Napi::Error::New(env, "requires 1 argument, or 2 arguments if a callback is being used").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  if (!args[0].IsNumber()) {
-    Napi::Error::New(env, "first argument must be a number").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  if (args.Length() == 2 && !args[1].IsFunction()) {
-    Napi::Error::New(env, "first argument must be a number, second argument must be a function").ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  // Define error message that may be set by the function that gets the modules
-  char* errorMessage = "";
-
-  std::vector<MODULEENTRY32> moduleEntries = module::getModules(args[0].As<Napi::Number>().Int32Value(), &errorMessage);
-
-  // If an error message was returned from the function getting the modules, throw the error.
-  // Only throw an error if there is no callback (if there's a callback, the error is passed there).
-  if (strcmp(errorMessage, "") && args.Length() != 2) {
-    Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
-    return env.Null();
-  }
-
-  // Creates v8 array with the size being that of the moduleEntries vector
-  // modules is an array of JavaScript objects
-  Napi::Array modules = Napi::Array::New(env, moduleEntries.size());
-
-  // Loop over all modules found
-  for (std::vector<MODULEENTRY32>::size_type i = 0; i != moduleEntries.size(); i++) {
-    //  Create a v8 object to store the current module's information
-    Napi::Object module = Napi::Object::New(env);
-
-    module.Set(Napi::String::New(env, "modBaseAddr"), Napi::Value::From(env, (uintptr_t)moduleEntries[i].modBaseAddr));
-    module.Set(Napi::String::New(env, "modBaseSize"), Napi::Value::From(env, (int)moduleEntries[i].modBaseSize));
-    module.Set(Napi::String::New(env, "szExePath"), Napi::String::New(env, moduleEntries[i].szExePath));
-    module.Set(Napi::String::New(env, "szModule"), Napi::String::New(env, moduleEntries[i].szModule));
-    module.Set(Napi::String::New(env, "th32ModuleID"), Napi::Value::From(env, (int)moduleEntries[i].th32ProcessID));
-
-    // Push the object to the array
-    modules.Set(i, module);
-  }
-
-  // getModules can either take one argument or two arguments
-  // one/two arguments is for asychronous use (the callback)
-  if (args.Length() == 2) {
-    // Callback to let the user handle with the information
-    Napi::Function callback = args[1].As<Napi::Function>();
-    callback.Call(env.Global(), { Napi::String::New(env, errorMessage), modules });
-    return env.Null();
-  } else {
-    // return JSON
-    return modules;
-  }
 }
 
 Napi::Value findModule(const Napi::CallbackInfo& args) {
@@ -248,9 +113,9 @@ Napi::Value findModule(const Napi::CallbackInfo& args) {
   std::string moduleName(args[0].As<Napi::String>().Utf8Value());
 
   // Define error message that may be set by the function that gets the modules
-  char* errorMessage = "";
+  const char* errorMessage = "";
 
-  MODULEENTRY32 module = module::findModule(moduleName.c_str(), args[1].As<Napi::Number>().Int32Value(), &errorMessage);
+  uintptr_t module = module::findModule(moduleName.c_str(), args[1].As<Napi::Number>().Int32Value(), &errorMessage);
 
   // If an error message was returned from the function getting the module, throw the error.
   // Only throw an error if there is no callback (if there's a callback, the error is passed there).
@@ -259,20 +124,13 @@ Napi::Value findModule(const Napi::CallbackInfo& args) {
     return env.Null();
   }
 
-  // In case it failed to open, let's keep retrying
-  while (!strcmp(module.szExePath, "")) {
-    module = module::findModule(moduleName.c_str(), args[1].As<Napi::Number>().Int32Value(), &errorMessage);
-  };
+  if (module == 0) {
+    return env.Null();
+  }
 
   // Create a v8 Object (JSON) to store the process information
   Napi::Object moduleInfo = Napi::Object::New(env);
-
-  moduleInfo.Set(Napi::String::New(env, "modBaseAddr"), Napi::Value::From(env, (uintptr_t)module.modBaseAddr));
-  moduleInfo.Set(Napi::String::New(env, "modBaseSize"), Napi::Value::From(env, (int)module.modBaseSize));
-  moduleInfo.Set(Napi::String::New(env, "szExePath"), Napi::String::New(env, module.szExePath));
-  moduleInfo.Set(Napi::String::New(env, "szModule"), Napi::String::New(env, module.szModule));
-  moduleInfo.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, (int)module.th32ProcessID));
-  moduleInfo.Set(Napi::String::New(env, "hModule"), Napi::Value::From(env, (uintptr_t)module.hModule));
+  moduleInfo.Set(Napi::String::New(env, "modBaseAddr"), Napi::Value::From(env, module));
 
   // findModule can either take one or two arguments,
   // three arguments for asychronous use (third argument is the callback)
@@ -312,8 +170,8 @@ Napi::Value readMemory(const Napi::CallbackInfo& args) {
   std::string errorMessage;
   Napi::Value retVal = env.Null();
 
-  HANDLE handle = (HANDLE)args[0].As<Napi::Number>().Int64Value();
-  DWORD64 address = args[1].As<Napi::Number>().Int64Value();
+  pid_t handle = (pid_t)args[0].As<Napi::Number>().Int64Value();
+  uintptr_t address = args[1].As<Napi::Number>().Int64Value();
 
   if (!strcmp(dataType, "byte")) {
 
@@ -347,7 +205,7 @@ Napi::Value readMemory(const Napi::CallbackInfo& args) {
 
   } else if (!strcmp(dataType, "dword")) {
 
-    DWORD result = Memory.readMemory<DWORD>(handle, address);
+    uint32_t result = Memory.readMemory<uint32_t>(handle, address);
     retVal = Napi::Value::From(env, result);
 
   } else if (!strcmp(dataType, "short")) {
@@ -481,9 +339,9 @@ Napi::Value readBuffer(const Napi::CallbackInfo& args) {
     return env.Null();
   }
 
-  HANDLE handle = (HANDLE)args[0].As<Napi::Number>().Int64Value();
-  DWORD64 address = args[1].As<Napi::Number>().Int64Value();
-  SIZE_T size = args[2].As<Napi::Number>().Int64Value();
+  pid_t handle = (pid_t)args[0].As<Napi::Number>().Int64Value();
+  uintptr_t address = args[1].As<Napi::Number>().Int64Value();
+  size_t size = args[2].As<Napi::Number>().Int64Value();
   char* data = Memory.readBuffer(handle, address, size);
 
   Napi::Buffer<char> buffer = Napi::Buffer<char>::New(env, data, size);
@@ -498,39 +356,9 @@ Napi::Value readBuffer(const Napi::CallbackInfo& args) {
 }
 
 
-// https://stackoverflow.com/a/17387176
-std::string GetLastErrorToString() {
-  DWORD errorMessageID = ::GetLastError();
-
-  // No error message, return empty string
-  if(errorMessageID == 0) {
-    return std::string();
-  }
-
-  LPSTR messageBuffer = nullptr;
-
-  size_t size = FormatMessageA(
-    FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-    NULL,
-    errorMessageID,
-    MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-    (LPSTR)&messageBuffer,
-    0,
-    NULL
-  );
-
-  std::string message(messageBuffer, size);
-
-  // Free the buffer
-  LocalFree(messageBuffer);
-  return message;
-}
-
 Napi::Object init(Napi::Env env, Napi::Object exports) {
   exports.Set(Napi::String::New(env, "openProcess"), Napi::Function::New(env, openProcess));
   exports.Set(Napi::String::New(env, "closeProcess"), Napi::Function::New(env, closeProcess));
-  exports.Set(Napi::String::New(env, "getProcesses"), Napi::Function::New(env, getProcesses));
-  exports.Set(Napi::String::New(env, "getModules"), Napi::Function::New(env, getModules));
   exports.Set(Napi::String::New(env, "findModule"), Napi::Function::New(env, findModule));
   exports.Set(Napi::String::New(env, "readMemory"), Napi::Function::New(env, readMemory));
   exports.Set(Napi::String::New(env, "readBuffer"), Napi::Function::New(env, readBuffer));
