@@ -1,5 +1,4 @@
 const memoryjs = require('./build/Release/memoryjs');
-const Debugger = require('./debugger');
 
 module.exports = {
   // data type constants
@@ -24,11 +23,6 @@ module.exports = {
   VECTOR3: 'vector3',
   VEC4: 'vec4',
   VECTOR4: 'vector4',
-
-  // signature type constants
-  NORMAL: 0x0,
-  READ: 0x1,
-  SUBTRACT: 0x2,
 
   // function data type constants
   T_VOID: 0x0,

@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <cstdint>
 #include <cstring>
+#include <cerrno>
+#include <sys/uio.h>
 
 class memory {
 public:
@@ -14,25 +16,24 @@ public:
 
   template <class dataType>
   dataType readMemory(pid_t hProcess, uintptr_t address) {
-    dataType cRead = {0};
-    // XXX: process_vm_readv
-    //ReadProcessMemory(hProcess, (LPVOID)address, &cRead, sizeof(dataType), NULL);
+    dataType cRead;
+    readMemoryData(hProcess, address, &cRead, sizeof(cRead));
     return cRead;
   }
 
   char* readBuffer(pid_t hProcess, uintptr_t address, size_t size) {
     char* buffer = new char[size];
-    memset(buffer, 0, size);
-    // XXX: process_vm_readv
-    //ReadProcessMemory(hProcess, (LPVOID)address, buffer, size, NULL);
+    readMemoryData(hProcess, address, buffer, size);
     return buffer;
   }
 
   char readChar(pid_t hProcess, uintptr_t address) {
     char value = 0;
-    // XXX: process_vm_readv
-    //ReadProcessMemory(hProcess, (LPVOID)address, &value, sizeof(char), NULL);
+    readMemoryData(hProcess, address, &value, sizeof(value));
     return value;
   }
+
+private:
+  void readMemoryData(pid_t pid, uintptr_t address, void *buffer, size_t size);
 };
 #endif
