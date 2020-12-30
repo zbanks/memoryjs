@@ -6,6 +6,7 @@
 #include <vector>
 #include <unistd.h>
 #include <cstdint>
+#include <stdlib.h>
 
 namespace module {
 
@@ -20,7 +21,7 @@ namespace module {
         char *pathname;
 
         ~Module() {
-            delete pathname;
+            free(pathname);
         }
     };
 
