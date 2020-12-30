@@ -115,7 +115,7 @@ Napi::Value findModule(const Napi::CallbackInfo& args) {
   // Define error message that may be set by the function that gets the modules
   const char* errorMessage = "";
 
-  uintptr_t module = module::findModule(moduleName.c_str(), args[1].As<Napi::Number>().Int32Value(), &errorMessage);
+  module::Module module = module::findModule(moduleName.c_str(), args[1].As<Napi::Number>().Int32Value(), &errorMessage);
 
   // If an error message was returned from the function getting the module, throw the error.
   // Only throw an error if there is no callback (if there's a callback, the error is passed there).
@@ -124,13 +124,14 @@ Napi::Value findModule(const Napi::CallbackInfo& args) {
     return env.Null();
   }
 
-  if (module == 0) {
+  if (module.start == 0) {
     return env.Null();
   }
 
   // Create a v8 Object (JSON) to store the process information
   Napi::Object moduleInfo = Napi::Object::New(env);
-  moduleInfo.Set(Napi::String::New(env, "modBaseAddr"), Napi::Value::From(env, module));
+  moduleInfo.Set(Napi::String::New(env, "modBaseAddr"), Napi::Value::From(env, module.start));
+  moduleInfo.Set(Napi::String::New(env, "szExePath"), Napi::Value::From(env, module.pathname));
 
   // findModule can either take one or two arguments,
   // three arguments for asychronous use (third argument is the callback)

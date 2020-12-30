@@ -4,9 +4,10 @@
 #include "module.h"
 #include "process.h"
 #include "memoryjs.h"
+#include <cinttypes>
 
-uintptr_t module::findModule(const char* moduleName, pid_t processId, const char** errorMessage) {
-    uintptr_t address = 0;
+module::Module module::findModule(const char* moduleName, pid_t processId, const char** errorMessage) {
+    module::Module result;
     bool found = false;
 
     char maps_path[4096];
@@ -15,7 +16,7 @@ uintptr_t module::findModule(const char* moduleName, pid_t processId, const char
 
     if (f == NULL) {
         *errorMessage = "cannot open /proc/.../maps";
-        return 0;
+        return result;
     }
 
     size_t len = 0;
@@ -33,8 +34,12 @@ uintptr_t module::findModule(const char* moduleName, pid_t processId, const char
             continue;
         }
 
-        // We only need the first field, which is the starting address
-        address = strtoul(line, NULL, 16);
+       sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
+              &result.end, result.permissions, &result.offset, 
+              &result.dev_major, &result.dev_minor, &result.inode);
+        
+        result.pathname = strdup(strchr(line,'/'));
+
         found = true;
         break;
     }
@@ -44,8 +49,9 @@ uintptr_t module::findModule(const char* moduleName, pid_t processId, const char
     if (!found) {
         *errorMessage = "unable to find module";
         printf("did not find module %s for pid %d\n", moduleName, processId);
-        return 0;
+        return result;
     }
 
-    return address;
-} 
+    return result;
+
+}
