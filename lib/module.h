@@ -18,6 +18,10 @@ namespace module {
         unsigned dev_minor;
         unsigned long long inode;
         char *pathname;
+
+        ~Module() {
+            delete pathname;
+        }
     };
 
     Module findModule(const char* moduleName, pid_t processId, const char** errorMessage);

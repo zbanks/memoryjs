@@ -4,9 +4,7 @@
 #include "module.h"
 #include "process.h"
 #include "memoryjs.h"
-
-//TODO: Might be ll on other systems
-#define KLF "l"
+#include <cinttypes>
 
 module::Module module::findModule(const char* moduleName, pid_t processId, const char** errorMessage) {
     module::Module result;
@@ -36,11 +34,11 @@ module::Module module::findModule(const char* moduleName, pid_t processId, const
             continue;
         }
 
-       sscanf(line, "%" KLF "x-%" KLF "x %31s %llx %x:%x %llu", &result.start,
-			&result.end, result.permissions, &result.offset, 
-            &result.dev_major, &result.dev_minor, &result.inode);
+       sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
+              &result.end, result.permissions, &result.offset, 
+              &result.dev_major, &result.dev_minor, &result.inode);
         
-        result.pathname = strchr(line,'/');
+        result.pathname = strdup(strchr(line,'/'));
 
         found = true;
         break;
