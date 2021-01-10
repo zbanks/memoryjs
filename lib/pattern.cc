@@ -23,14 +23,7 @@ uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char
 
   auto moduleBytes = std::vector<unsigned char>(moduleSize);
 
-  struct iovec remote_iov = {.iov_base = (void *)moduleBase, .iov_len = moduleSize};
-  struct iovec local_iov = {.iov_base = &moduleBytes[0], .iov_len = moduleSize};
-
-  ssize_t rc = process_vm_readv(hProcess, &local_iov, 1, &remote_iov, 1, 0);
-
-  if (rc < 0 || (size_t) rc != moduleSize) {
-    printf("error: process_vm_readv returned %zd instead of %zu (%s) address=%#lx\n", rc, moduleSize, strerror(errno), moduleBase);
-  }
+  readMemoryData(hProcess, moduleBase, &moduleBytes[0], moduleSize);
 
   auto byteBase = const_cast<unsigned char*>(&moduleBytes.at(0));
   auto maxOffset = moduleSize - 0x1000;
@@ -38,15 +31,9 @@ uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char
   for (auto offset = 0UL; offset < maxOffset; ++offset) {
     if (compareBytes(byteBase + offset, pattern)) {
       auto address = moduleBase + offset + patternOffset;
-      struct iovec remote_iov = {.iov_base = (void *)address, .iov_len = sizeof(uintptr_t)};
-      struct iovec local_iov = {.iov_base = &address, .iov_len = sizeof(uintptr_t)};
 
       /* read memory at pattern if flag is raised*/
-      if (sigType & ST_READ) rc = process_vm_readv(hProcess, &local_iov, 1, &remote_iov, 1, 0);
-
-      if (rc < 0 || (size_t) rc != moduleSize) {
-        printf("error: process_vm_readv returned %zd instead of %zu (%s) address=%#lx\n", rc, moduleSize, strerror(errno), moduleBase);
-      }
+      if (sigType & ST_READ) readMemoryData(hProcess, address, &address, sizeof(uintptr_t));
 
       /* subtract image base if flag is raised */
       if (sigType & ST_SUBTRACT) address -= moduleBase;
@@ -72,4 +59,15 @@ bool pattern::compareBytes(const unsigned char* bytes, const char* pattern) {
   }
   
   return true;
+}
+
+void pattern::readMemoryData(pid_t pid, uintptr_t address, void *buffer, size_t size) {
+    struct iovec remote_iov = {.iov_base = (void*)address, .iov_len = size };
+    struct iovec local_iov = {.iov_base = buffer, .iov_len = size };
+    ssize_t rc = process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
+
+    if (rc < 0 || (size_t) rc != size) {
+        printf("error: process_vm_readv returned %zd instead of %zu (%s) address=%#lx \n", rc, size, strerror(errno), address);
+        memset(buffer, 0, size);
+    }
 }

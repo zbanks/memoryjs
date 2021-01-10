@@ -22,6 +22,9 @@ public:
 
   uintptr_t findPattern(pid_t hProcess, module::Module module, const char* pattern, short sigType, uintptr_t patternOffset, uintptr_t addressOffset);
   bool compareBytes(const unsigned char* bytes, const char* pattern);
+
+private:
+  void readMemoryData(pid_t pid, uintptr_t address, void *buffer, size_t size);
 };
 
 #endif
