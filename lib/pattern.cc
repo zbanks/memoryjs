@@ -13,6 +13,8 @@
 #define getBits( x ) (INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
 #define getByte( x ) (getBits(x[0]) << 4 | getBits(x[1]))
 
+memory Memory;
+
 pattern::pattern() {}
 pattern::~pattern() {}
 
@@ -23,7 +25,7 @@ uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char
 
   auto moduleBytes = std::vector<unsigned char>(moduleSize);
 
-  readMemoryData(hProcess, moduleBase, &moduleBytes[0], moduleSize);
+  Memory.readMemoryData(hProcess, moduleBase, &moduleBytes[0], moduleSize);
 
   auto byteBase = const_cast<unsigned char*>(&moduleBytes.at(0));
   auto maxOffset = moduleSize - 0x1000;
@@ -33,7 +35,7 @@ uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char
       auto address = moduleBase + offset + patternOffset;
 
       /* read memory at pattern if flag is raised*/
-      if (sigType & ST_READ) readMemoryData(hProcess, address, &address, sizeof(uintptr_t));
+      if (sigType & ST_READ) Memory.readMemoryData(hProcess, address, &address, sizeof(uintptr_t));
 
       /* subtract image base if flag is raised */
       if (sigType & ST_SUBTRACT) address -= moduleBase;
@@ -59,15 +61,4 @@ bool pattern::compareBytes(const unsigned char* bytes, const char* pattern) {
   }
   
   return true;
-}
-
-void pattern::readMemoryData(pid_t pid, uintptr_t address, void *buffer, size_t size) {
-    struct iovec remote_iov = {.iov_base = (void*)address, .iov_len = size };
-    struct iovec local_iov = {.iov_base = buffer, .iov_len = size };
-    ssize_t rc = process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
-
-    if (rc < 0 || (size_t) rc != size) {
-        printf("error: process_vm_readv returned %zd instead of %zu (%s) address=%#lx \n", rc, size, strerror(errno), address);
-        memset(buffer, 0, size);
-    }
 }
