@@ -13,13 +13,12 @@
 #define getBits( x ) (INRANGE(x,'0','9') ? (x - '0') : ((x&(~0x20)) - 'A' + 0xa))
 #define getByte( x ) (getBits(x[0]) << 4 | getBits(x[1]))
 
-memory Memory;
-
 pattern::pattern() {}
 pattern::~pattern() {}
 
 /* based off Y3t1y3t's implementation */
 uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char* pattern, short sigType, uintptr_t patternOffset, uintptr_t addressOffset) { 
+  memory Memory;
   auto moduleSize = uintptr_t(module.end - module.start);
   auto moduleBase = uintptr_t(module.start);
 
