@@ -3,8 +3,10 @@
 #include "process.h"
 #include "memoryjs.h"
 #include "memory.h"
+#include "pattern.h"
 
 process Process;
+pattern Pattern;
 // module Module;
 memory Memory;
 
@@ -143,6 +145,60 @@ Napi::Value findModule(const Napi::CallbackInfo& args) {
   } else {
     // return JSON
     return moduleInfo;
+  }
+}
+
+Napi::Value findPattern(const Napi::CallbackInfo& args) {
+  Napi::Env env = args.Env();
+
+  // Address of findPattern result
+  uintptr_t address = -1;
+
+  // Define error message that may be set by the function that gets the modules
+  const char* errorMessage = "";
+
+  pid_t hProcess = (pid_t)args[0].As<Napi::Number>().Int64Value();
+
+  std::vector<module::Module> moduleEntries = module::getModules(hProcess, &errorMessage);
+
+  // If en error message was returned from the function getting the modules, throw the error.
+  // Only throw an error if there is no callback (if there's a callback, the error is passed there).
+  if (strcmp(errorMessage, "") && args.Length() != 7) {
+    Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
+    return env.Null();
+  }
+
+  for (std::vector<module::Module>::size_type i = 0; i != moduleEntries.size(); i++) {
+    std::string moduleName(args[1].As<Napi::String>().Utf8Value());
+
+    char *match = strstr(moduleEntries[i].pathname, moduleName.c_str());
+
+    if (NULL == match) {
+      std::string signature(args[2].As<Napi::String>().Utf8Value());
+
+      short sigType = args[3].As<Napi::Number>().Int32Value();
+      uint32_t patternOffset = args[4].As<Napi::Number>().Int32Value();
+      uint32_t addressOffset = args[5].As<Napi::Number>().Int32Value();
+
+      address = Pattern.findPattern(hProcess, moduleEntries[i], signature.c_str(), sigType, patternOffset, addressOffset);
+      break;
+    }
+  }
+
+  // If no error was set by getModules and the address is still the value we set it as, it probably means we couldn't find the module
+  if (strcmp(errorMessage, "") && address == (uintptr_t)-1) errorMessage = "unable to find module";
+
+  // If no error was set by getModules and the addressis -2 this means there was no match to the pattern
+  if (strcmp(errorMessage, "") && address == (uintptr_t)-2) errorMessage = "no match found";
+
+  if (args.Length() == 7) {
+    // Callback to let the user handle the information
+    Napi::Function callback = args[6].As<Napi::Function>();
+    callback.Call(env.Global(), { Napi::String::New(env, errorMessage), Napi::Value::From(env, address) });
+    return env.Null();
+  } else {
+    // return JSON
+    return Napi::Value::From(env, address);
   }
 }
 
