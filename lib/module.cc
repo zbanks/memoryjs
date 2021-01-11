@@ -6,6 +6,42 @@
 #include "memoryjs.h"
 #include <cinttypes>
 
+std::vector<module::Module> module::getModules(pid_t processId, const char**  errorMessage) {
+    std::vector<module::Module> modules;
+
+    char maps_path[4096];
+    snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", processId);
+    FILE *f = fopen(maps_path, "r");
+
+    if (f == NULL) {
+        *errorMessage = "cannot open /proc/.../maps";
+        return modules;
+    }
+
+    size_t len = 0;
+    char *line = NULL;
+    ssize_t rc = 0;
+    while ((rc = getline(&line, &len, f)) != -1) {
+        if (rc < 1) {
+            continue;
+        }
+        line[rc-1] = '\0';
+        module::Module result;
+
+        sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
+              &result.end, result.permissions, &result.offset, 
+              &result.dev_major, &result.dev_minor, &result.inode);
+
+        result.pathname = strdup(strchr(line,'/'));
+
+        modules.push_back(result);
+    }
+    free(line);
+    fclose(f);
+
+    return modules;
+}
+
 module::Module module::findModule(const char* moduleName, pid_t processId, const char** errorMessage) {
     module::Module result;
     bool found = false;
