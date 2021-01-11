@@ -10,6 +10,7 @@
         "lib/memory.cc",
         "lib/process.cc",
         "lib/module.cc",
+        "lib/pattern.cc",
       ],
       'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ]
     }
