@@ -417,6 +417,7 @@ Napi::Object init(Napi::Env env, Napi::Object exports) {
   exports.Set(Napi::String::New(env, "openProcess"), Napi::Function::New(env, openProcess));
   exports.Set(Napi::String::New(env, "closeProcess"), Napi::Function::New(env, closeProcess));
   exports.Set(Napi::String::New(env, "findModule"), Napi::Function::New(env, findModule));
+  exports.Set(Napi::String::New(env, "findPattern"), Napi::Function::New(env, findPattern));
   exports.Set(Napi::String::New(env, "readMemory"), Napi::Function::New(env, readMemory));
   exports.Set(Napi::String::New(env, "readBuffer"), Napi::Function::New(env, readBuffer));
   return exports;
