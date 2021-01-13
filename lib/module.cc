@@ -29,16 +29,16 @@ std::vector<module::Module *> module::getModules(pid_t processId, const char**  
         line[rc-1] = '\0';
         result = new Module();
 
-        if (strstr(line, "/") == NULL) {
-            delete result;
-            continue;
-        }
-
         sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result->start,
               &result->end, result->permissions, &result->offset, 
               &result->dev_major, &result->dev_minor, &result->inode);
 
-        result->pathname = strdup(strchr(line,'/'));
+        // If the line doesn't have a path, simply add a dummy value to pathname.
+        if (strstr(line, "/") != NULL) {
+            result->pathname = strdup(strchr(line,'/'));
+        } else {
+            result->pathname = strdup("unknown");
+        }
 
         modules.push_back(result);
     }
