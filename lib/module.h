@@ -26,7 +26,7 @@ namespace module {
     };
 
     Module findModule(const char* moduleName, pid_t processId, const char** errorMessage);
-    std::vector<Module> getModules(pid_t processId, const char**  errorMessage);
+    std::vector<Module *> getModules(pid_t processId, const char**  errorMessage);
 }
 
 #endif

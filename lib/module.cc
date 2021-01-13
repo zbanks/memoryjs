@@ -6,8 +6,9 @@
 #include "memoryjs.h"
 #include <cinttypes>
 
-std::vector<module::Module> module::getModules(pid_t processId, const char**  errorMessage) {
-    std::vector<module::Module> modules;
+std::vector<module::Module *> module::getModules(pid_t processId, const char**  errorMessage) {
+    std::vector<Module *> modules;
+    Module *result = NULL;
 
     char maps_path[4096];
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", processId);
@@ -26,13 +27,18 @@ std::vector<module::Module> module::getModules(pid_t processId, const char**  er
             continue;
         }
         line[rc-1] = '\0';
-        module::Module result;
+        result = new Module();
 
-        sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
-              &result.end, result.permissions, &result.offset, 
-              &result.dev_major, &result.dev_minor, &result.inode);
+        if (strstr(line, "/") == NULL) {
+            delete result;
+            continue;
+        }
 
-        result.pathname = strdup(strchr(line,'/'));
+        sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result->start,
+              &result->end, result->permissions, &result->offset, 
+              &result->dev_major, &result->dev_minor, &result->inode);
+
+        result->pathname = strdup(strchr(line,'/'));
 
         modules.push_back(result);
     }
