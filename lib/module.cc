@@ -35,9 +35,9 @@ std::vector<module::Module *> module::getModules(pid_t processId, const char**  
 
         // If the line doesn't have a path, simply add a dummy value to pathname.
         if (strstr(line, "/") != NULL) {
-            result->pathname = strdup(strchr(line,'/'));
+            strcpy(result->pathname, strchr(line,'/'));
         } else {
-            result->pathname = strdup("unknown");
+            strcpy(result->pathname, "unknown");
         }
 
         modules.push_back(result);
@@ -80,7 +80,7 @@ module::Module module::findModule(const char* moduleName, pid_t processId, const
               &result.end, result.permissions, &result.offset, 
               &result.dev_major, &result.dev_minor, &result.inode);
         
-        result.pathname = strdup(strchr(line,'/'));
+        strcpy(result.pathname, strchr(line,'/'));
 
         found = true;
         break;

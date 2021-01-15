@@ -18,11 +18,7 @@ namespace module {
         unsigned dev_major;
         unsigned dev_minor;
         unsigned long long inode;
-        char *pathname;
-
-        ~Module() {
-            free(pathname);
-        }
+        char pathname[4096];
     };
 
     Module findModule(const char* moduleName, pid_t processId, const char** errorMessage);
