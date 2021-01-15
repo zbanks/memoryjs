@@ -6,9 +6,9 @@
 #include "memoryjs.h"
 #include <cinttypes>
 
-std::vector<module::Module *> module::getModules(pid_t processId, const char**  errorMessage) {
-    std::vector<Module *> modules;
-    Module *result = NULL;
+std::vector<module::Module> module::getModules(pid_t processId, const char**  errorMessage) {
+    std::vector<Module> modules;
+    char prev_pathname[4096] = "unknown\0";
 
     char maps_path[4096];
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", processId);
@@ -27,18 +27,17 @@ std::vector<module::Module *> module::getModules(pid_t processId, const char**  
             continue;
         }
         line[rc-1] = '\0';
-        result = new Module();
+        Module result;
 
-        sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result->start,
-              &result->end, result->permissions, &result->offset, 
-              &result->dev_major, &result->dev_minor, &result->inode);
+        sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
+              &result.end, result.permissions, &result.offset, 
+              &result.dev_major, &result.dev_minor, &result.inode);
 
         // If the line doesn't have a path, simply add a dummy value to pathname.
         if (strstr(line, "/") != NULL) {
-            strcpy(result->pathname, strchr(line,'/'));
-        } else {
-            strcpy(result->pathname, "unknown");
+            strcpy(prev_pathname, strchr(line, '/'));
         }
+        strcpy(result.pathname, prev_pathname);
 
         modules.push_back(result);
     }

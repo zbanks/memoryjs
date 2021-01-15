@@ -159,7 +159,7 @@ Napi::Value findPattern(const Napi::CallbackInfo& args) {
 
   pid_t hProcess = (pid_t)args[0].As<Napi::Number>().Int64Value();
 
-  std::vector<module::Module *> moduleEntries = module::getModules(hProcess, &errorMessage);
+  std::vector<module::Module> moduleEntries = module::getModules(hProcess, &errorMessage);
 
   // If en error message was returned from the function getting the modules, throw the error.
   // Only throw an error if there is no callback (if there's a callback, the error is passed there).
@@ -168,10 +168,10 @@ Napi::Value findPattern(const Napi::CallbackInfo& args) {
     return env.Null();
   }
 
-  for (std::vector<module::Module *>::size_type i = 0; i != moduleEntries.size(); i++) {
+  for (std::vector<module::Module>::size_type i = 0; i != moduleEntries.size(); i++) {
     std::string moduleName(args[1].As<Napi::String>().Utf8Value());
 
-    char *match = strstr(moduleEntries[i]->pathname, moduleName.c_str());
+    char *match = strstr(moduleEntries[i].pathname, moduleName.c_str());
     if (NULL == match) {
       std::string signature(args[2].As<Napi::String>().Utf8Value());
 
@@ -179,19 +179,11 @@ Napi::Value findPattern(const Napi::CallbackInfo& args) {
       uint32_t patternOffset = args[4].As<Napi::Number>().Int32Value();
       uint32_t addressOffset = args[5].As<Napi::Number>().Int32Value();
 
-      address = Pattern.findPattern(hProcess, *moduleEntries[i], signature.c_str(), sigType, patternOffset, addressOffset);
+      address = Pattern.findPattern(hProcess, moduleEntries[i], signature.c_str(), sigType, patternOffset, addressOffset);
       break;
     }
   }
 
-  // Free ModulePointers when done searching.
-  for (std::vector<module::Module *>::size_type i = 0; i != moduleEntries.size(); i++) {
-    delete moduleEntries[i];
-  }
-
-  // Free the moduleEntries vector.
-  moduleEntries.clear();
-  
   // If no error was set by getModules and the address is still the value we set it as, it probably means we couldn't find the module
   if (strcmp(errorMessage, "") && address == (uintptr_t)-1) errorMessage = "unable to find module";
 
