@@ -172,7 +172,7 @@ Napi::Value findPattern(const Napi::CallbackInfo& args) {
     std::string moduleName(args[1].As<Napi::String>().Utf8Value());
 
     char *match = strstr(moduleEntries[i].pathname, moduleName.c_str());
-    if (NULL == match) {
+    if (match != NULL) {
       std::string signature(args[2].As<Napi::String>().Utf8Value());
 
       short sigType = args[3].As<Napi::Number>().Int32Value();
@@ -180,7 +180,9 @@ Napi::Value findPattern(const Napi::CallbackInfo& args) {
       uint32_t addressOffset = args[5].As<Napi::Number>().Int32Value();
 
       address = Pattern.findPattern(hProcess, moduleEntries[i], signature.c_str(), sigType, patternOffset, addressOffset);
-      break;
+      if (address != (uintptr_t)-2) {
+        break;
+      }
     }
   }
 
