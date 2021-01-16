@@ -17,7 +17,7 @@ pattern::pattern() {}
 pattern::~pattern() {}
 
 /* based off Y3t1y3t's implementation */
-uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char* pattern, short sigType, uintptr_t patternOffset, uintptr_t addressOffset) { 
+uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, uintptr_t baseAddress, const char* pattern, short sigType, uintptr_t patternOffset, uintptr_t addressOffset) { 
   memory Memory;
   auto moduleSize = uintptr_t(module.end - module.start);
   auto moduleBase = uintptr_t(module.start);
@@ -37,7 +37,7 @@ uintptr_t pattern::findPattern(pid_t hProcess, module::Module module, const char
       if (sigType & ST_READ) Memory.readMemoryData(hProcess, address, &address, sizeof(uintptr_t));
 
       /* subtract image base if flag is raised */
-      if (sigType & ST_SUBTRACT) address -= moduleBase;
+      if (sigType & ST_SUBTRACT) address -= baseAddress;
 
       return address + addressOffset;
     }

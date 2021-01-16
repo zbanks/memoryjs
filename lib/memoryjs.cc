@@ -168,18 +168,22 @@ Napi::Value findPattern(const Napi::CallbackInfo& args) {
     return env.Null();
   }
 
+  uintptr_t baseAddress = 0;
   for (std::vector<module::Module>::size_type i = 0; i != moduleEntries.size(); i++) {
     std::string moduleName(args[1].As<Napi::String>().Utf8Value());
 
     char *match = strstr(moduleEntries[i].pathname, moduleName.c_str());
     if (match != NULL) {
+      if (baseAddress == 0) {
+        baseAddress = moduleEntries[i].start;
+      }
       std::string signature(args[2].As<Napi::String>().Utf8Value());
 
       short sigType = args[3].As<Napi::Number>().Int32Value();
       uint32_t patternOffset = args[4].As<Napi::Number>().Int32Value();
       uint32_t addressOffset = args[5].As<Napi::Number>().Int32Value();
 
-      address = Pattern.findPattern(hProcess, moduleEntries[i], signature.c_str(), sigType, patternOffset, addressOffset);
+      address = Pattern.findPattern(hProcess, moduleEntries[i], baseAddress, signature.c_str(), sigType, patternOffset, addressOffset);
       if (address != (uintptr_t)-2) {
         break;
       }
