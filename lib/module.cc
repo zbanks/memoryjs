@@ -27,6 +27,13 @@ std::vector<module::Module> module::getModules(pid_t processId, const char**  er
             continue;
         }
         line[rc-1] = '\0';
+
+        // Skip '[heap]', '[stack]', etc.
+        // Probably don't need these right now.
+        if (strchr(line, '[') != NULL) {
+            continue;
+        }
+
         Module result;
 
         sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
@@ -34,7 +41,7 @@ std::vector<module::Module> module::getModules(pid_t processId, const char**  er
               &result.dev_major, &result.dev_minor, &result.inode);
 
         // If the line doesn't have a path, simply add a dummy value to pathname.
-        if (strstr(line, "/") != NULL) {
+        if (strchr(line, '/') != NULL) {
             strcpy(prev_pathname, strchr(line, '/'));
         }
         strcpy(result.pathname, prev_pathname);
