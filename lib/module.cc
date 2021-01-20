@@ -37,7 +37,7 @@ std::vector<module::Module> module::getModules(pid_t processId, const char**  er
         Module result;
 
         sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
-              &result.end, result.permissions, &result.offset, 
+              &result.end, result.permissions, &result.offset,
               &result.dev_major, &result.dev_minor, &result.inode);
 
         // If the line doesn't have a path, simply add a dummy value to pathname.
@@ -82,10 +82,10 @@ module::Module module::findModule(const char* moduleName, pid_t processId, const
             continue;
         }
 
-       sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
-              &result.end, result.permissions, &result.offset, 
+        sscanf(line, "%" SCNxPTR "-%" SCNxPTR " %31s %llx %x:%x %llu", &result.start,
+              &result.end, result.permissions, &result.offset,
               &result.dev_major, &result.dev_minor, &result.inode);
-        
+
         strcpy(result.pathname, strchr(line,'/'));
 
         found = true;
