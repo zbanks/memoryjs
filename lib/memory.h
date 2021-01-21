@@ -33,7 +33,6 @@ public:
     return value;
   }
 
-private:
   void readMemoryData(pid_t pid, uintptr_t address, void *buffer, size_t size);
 };
 #endif

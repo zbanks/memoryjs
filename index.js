@@ -24,6 +24,11 @@ module.exports = {
   VEC4: 'vec4',
   VECTOR4: 'vector4',
 
+  // signature type constants
+  NORMAL: 0x0,
+  READ: 0x1,
+  SUBTRACT: 0x2,
+
   // function data type constants
   T_VOID: 0x0,
   T_STRING: 0x1,
@@ -63,6 +68,14 @@ module.exports = {
     }
 
     memoryjs.readBuffer(handle, address, size, callback);
+  },
+
+  findPattern(handle, moduleName, signature, signatureType, patternOffset, addressOffset, callback) {
+    if (arguments.length === 6) {
+      return memoryjs.findPattern(handle, moduleName, signature, signatureType, patternOffset, addressOffset);
+    }
+
+    memoryjs.findPattern(handle, moduleName, signature, signatureType, patternOffset, addressOffset, callback);
   },
 
   closeProcess: memoryjs.closeProcess, // nop
