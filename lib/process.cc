@@ -4,6 +4,7 @@
 #include <cstring>
 #include "process.h"
 #include "memoryjs.h"
+#include <sys/stat.h>
 
 process::process() {}
 process::~process() {}
@@ -82,4 +83,36 @@ std::vector<pid_t> getProcesses(const char **errorMessage) {
     closedir(dir);
 
     return pids;
+}
+
+const char *getProcessPath(pid_t proccessId, const char** errorMessage) {
+    struct stat sb;
+    char *buf;
+    ssize_t nbytes, bufsiz;
+    char procExePath[1024];
+    
+    sprintf(procExePath, "/proc/%d/exe", proccessId);
+
+    if (lstat(procExePath, &sb) == -1) {
+        *errorMessage = "lstat failed to open /proc/#/exe";
+        return NULL;
+    }
+
+    bufsiz = sb.st_size + 1;
+
+    // Sometimes it might be 0, so lets just guess-ti-mate.
+    if (sb.st_size == 0) {
+        bufsiz = PATH_MAX;
+    }
+
+    buf = (char *)malloc(bufsiz);
+    
+    nbytes = readlink(procExePath, buf, bufsiz);
+    if (nbytes == -1) {
+        *errorMessage = "readlink failed to read /proc/#/exe";
+        return NULL;
+    }
+
+    // Remember to free me please.
+    return buf;
 }
