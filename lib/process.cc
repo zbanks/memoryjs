@@ -59,3 +59,27 @@ pid_t process::openProcess(const char* processName, const char** errorMessage){
 
     return processPid;
 }
+
+std::vector<pid_t> getProcesses(const char **errorMessage) {
+    std::vector<pid_t> pids;
+
+    DIR *dir = opendir("/proc");
+    if (dir == NULL) {
+        *errorMessage = "unable to open /proc";
+        return pids;
+    }
+
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL) {
+        pid_t pid = strtol(ent->d_name, NULL, 0);
+        if (pid == 0) {
+            continue;
+        }
+
+        pids.push_back(pid);
+    }
+
+    closedir(dir);
+
+    return pids;
+}

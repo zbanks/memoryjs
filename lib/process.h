@@ -15,7 +15,8 @@ public:
   ~process();
 
   pid_t openProcess(const char* processName, const char** errorMessage);
-  //std::vector<pid_t> getProcesses(const char** errorMessage);
+
+  std::vector<pid_t> getProcesses(const char** errorMessage);
 };
 
 #endif
