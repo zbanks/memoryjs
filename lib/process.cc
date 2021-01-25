@@ -85,7 +85,7 @@ std::vector<pid_t> process::getProcesses(const char **errorMessage) {
     return pids;
 }
 
-char *process::getProcessPath(pid_t proccessId, const char** errorMessage) {
+char *process::getProcessPath(pid_t proccessId) {
     struct stat sb;
     char *buf;
     ssize_t nbytes, bufsiz;
@@ -94,7 +94,6 @@ char *process::getProcessPath(pid_t proccessId, const char** errorMessage) {
     sprintf(procExePath, "/proc/%d/exe", proccessId);
 
     if (lstat(procExePath, &sb) == -1) {
-        *errorMessage = "lstat failed to open /proc/#/exe";
         return NULL;
     }
 
@@ -109,7 +108,7 @@ char *process::getProcessPath(pid_t proccessId, const char** errorMessage) {
     
     nbytes = readlink(procExePath, buf, bufsiz);
     if (nbytes == -1) {
-        *errorMessage = "readlink failed to read /proc/#/exe";
+        free(buf);
         return NULL;
     }
 

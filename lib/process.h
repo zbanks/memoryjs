@@ -18,7 +18,7 @@ public:
 
   std::vector<pid_t> getProcesses(const char** errorMessage);
 
-  char * getProcessPath(pid_t processId, const char** errorMessage);
+  char * getProcessPath(pid_t processId);
 };
 
 #endif
