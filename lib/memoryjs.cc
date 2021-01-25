@@ -113,27 +113,23 @@ Napi::Value getProcesses(const Napi::CallbackInfo& args) {
 
   Napi::Array processes = Napi::Array::New(env, processPids.size());
 
-  // Used for getProcessPath
-  char *processPath = NULL;
-
   for (std::vector<pid_t>::size_type i = 0; i != processPids.size(); i++) {
     Napi::Object process = Napi::Object::New(env);
 
-    processPath = Process.getProcessPath(processPids[i], &errorMessage);
+    char *processPath = Process.getProcessPath(processPids[i]);
 
-    if (strcmp(errorMessage, "")) {
-      Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
-      return env.Null();
+    if (processPath == NULL) {
+      processPath = strdup("unknown");
     }
 
     process.Set(Napi::String::New(env, "szExePath"), Napi::Value::From(env, processPath));
     process.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, processPids[i]));
 
     processes.Set(i, process);
-  }
 
-  // getProcessPath returns a malloc'd cstring.
-  free(processPath);
+    // Free malloc'd memory.
+    free(processPath);
+  }
 
   /* getProcesses can either take no arguments or one argument
      one argument is for asychronous use (the callback) */
