@@ -41,6 +41,14 @@ module.exports = {
     memoryjs.openProcess(processIdentifier, callback);
   },
 
+  getProcesses(callback) {
+    if (arguments.length === 0) {
+      return memoryjs.getProcesses();
+    }
+
+    memoryjs.getProcesses(callback);
+  },
+
   findModule(moduleName, processId, callback) {
     if (arguments.length === 2) {
       return memoryjs.findModule(moduleName, processId);
