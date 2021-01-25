@@ -85,7 +85,7 @@ std::vector<pid_t> getProcesses(const char **errorMessage) {
     return pids;
 }
 
-const char *getProcessPath(pid_t proccessId, const char** errorMessage) {
+char *getProcessPath(pid_t proccessId, const char** errorMessage) {
     struct stat sb;
     char *buf;
     ssize_t nbytes, bufsiz;
