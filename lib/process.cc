@@ -61,7 +61,7 @@ pid_t process::openProcess(const char* processName, const char** errorMessage){
     return processPid;
 }
 
-std::vector<pid_t> getProcesses(const char **errorMessage) {
+std::vector<pid_t> process::getProcesses(const char **errorMessage) {
     std::vector<pid_t> pids;
 
     DIR *dir = opendir("/proc");
@@ -85,7 +85,7 @@ std::vector<pid_t> getProcesses(const char **errorMessage) {
     return pids;
 }
 
-char *getProcessPath(pid_t proccessId, const char** errorMessage) {
+char *process::getProcessPath(pid_t proccessId, const char** errorMessage) {
     struct stat sb;
     char *buf;
     ssize_t nbytes, bufsiz;
