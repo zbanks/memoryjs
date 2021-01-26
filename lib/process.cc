@@ -86,32 +86,25 @@ std::vector<pid_t> process::getProcesses(const char **errorMessage) {
 }
 
 char *process::getProcessPath(pid_t proccessId) {
-    struct stat sb;
-    char *buf;
-    ssize_t nbytes, bufsiz;
-    char procExePath[1024];
+    char comm[4096];
+    char comm_path[4096];
     
-    sprintf(procExePath, "/proc/%d/exe", proccessId);
+    sprintf(comm_path, "/proc/%d/comm", proccessId);
 
-    if (lstat(procExePath, &sb) == -1) {
+    FILE *f = fopen(comm_path, "r");
+    if (f == NULL) {
         return NULL;
     }
 
-    bufsiz = sb.st_size + 1;
-
-    // Sometimes it might be 0, so lets just guess-ti-mate.
-    if (sb.st_size == 0) {
-        bufsiz = PATH_MAX;
-    }
-
-    buf = (char *)malloc(bufsiz);
-    
-    nbytes = readlink(procExePath, buf, bufsiz);
-    if (nbytes == -1) {
-        free(buf);
+    size_t rc = fread(comm, 1, sizeof(comm), f);
+    if (rc > 1) {
+        comm[rc - 1] = '\0';
+    } else {
+        fclose(f);
         return NULL;
     }
+    fclose(f);
 
     // Remember to free me please.
-    return buf;
+    return strdup(comm);
 }
