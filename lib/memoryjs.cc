@@ -122,7 +122,7 @@ Napi::Value getProcesses(const Napi::CallbackInfo& args) {
       processPath = strdup("unknown");
     }
 
-    process.Set(Napi::String::New(env, "szExePath"), Napi::Value::From(env, processPath));
+    process.Set(Napi::String::New(env, "szExeFile"), Napi::Value::From(env, processPath));
     process.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, processPids[i]));
 
     processes.Set(i, process);
