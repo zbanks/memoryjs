@@ -4,7 +4,6 @@
 #include <cstring>
 #include "process.h"
 #include "memoryjs.h"
-#include <sys/stat.h>
 
 process::process() {}
 process::~process() {}
