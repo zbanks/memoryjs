@@ -116,7 +116,7 @@ Napi::Value getProcesses(const Napi::CallbackInfo& args) {
   for (std::vector<pid_t>::size_type i = 0; i != processPids.size(); i++) {
     Napi::Object process = Napi::Object::New(env);
 
-    char *processPath = Process.getProcessPath(processPids[i]);
+    char *processPath = Process.getProcessName(processPids[i]);
 
     if (processPath == NULL) {
       processPath = strdup("unknown");

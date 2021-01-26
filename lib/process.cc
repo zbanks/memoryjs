@@ -85,7 +85,7 @@ std::vector<pid_t> process::getProcesses(const char **errorMessage) {
     return pids;
 }
 
-char *process::getProcessPath(pid_t proccessId) {
+char *process::getProcessName(pid_t proccessId) {
     char comm[4096];
     char comm_path[4096];
     
