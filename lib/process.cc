@@ -60,50 +60,75 @@ pid_t process::openProcess(const char* processName, const char** errorMessage){
     return processPid;
 }
 
-std::vector<pid_t> process::getProcesses(const char **errorMessage) {
-    std::vector<pid_t> pids;
+std::vector<process::processStat> process::getProcesses(const char **errorMessage) {
+    std::vector<process::processStat> result;
+    char procStatPath[4096];
 
     DIR *dir = opendir("/proc");
     if (dir == NULL) {
         *errorMessage = "unable to open /proc";
-        return pids;
+        return result;
     }
 
     struct dirent *ent;
     while ((ent = readdir(dir)) != NULL) {
+        struct process::processStat pstat;
         pid_t pid = strtol(ent->d_name, NULL, 0);
+
         if (pid == 0) {
             continue;
         }
 
-        pids.push_back(pid);
+        sprintf(procStatPath, "/proc/%d/stat", pid);
+
+        FILE *statFile = fopen(procStatPath, "r");
+
+        // If we can't open a /proc/#/stat file just skip it.
+        if (statFile == NULL) {
+            continue;
+        }
+
+        // Get the position of the last ")" character.
+        // From: https://unix.stackexchange.com/a/581565
+        off_t bracketPos = 0;
+
+        while (1) {
+            char c = fgetc(statFile);
+            if (c == EOF) break;
+            if (c == ')') bracketPos = ftell(statFile);
+        }
+        fseek(statFile, 0, SEEK_SET);
+
+        int rc = fscanf(statFile, "%d ", &pstat.pid);
+
+        if (rc == EOF) {
+            *errorMessage = "failed to read from /proc/#/stat";
+            return result;
+        }
+
+        size_t commIndex = 0;
+        
+        // Skip the first "(" character
+        fseek(statFile, 1, SEEK_CUR);
+
+        while (ftell(statFile) < bracketPos) {
+            char c = fgetc(statFile);
+            pstat.comm[commIndex++] = c;
+        }
+        // Discard the last ")" character
+        pstat.comm[commIndex - 1] = '\0';
+
+        if (rc == EOF) {
+            *errorMessage = "failed to read from /proc/#/stat";
+            return result;
+        }
+
+        fclose(statFile);
+
+        result.push_back(pstat);
     }
 
     closedir(dir);
 
-    return pids;
-}
-
-char *process::getProcessName(pid_t proccessId) {
-    char comm[4096];
-    char comm_path[4096];
-    
-    sprintf(comm_path, "/proc/%d/comm", proccessId);
-
-    FILE *f = fopen(comm_path, "r");
-    if (f == NULL) {
-        return NULL;
-    }
-
-    size_t rc = fread(comm, 1, sizeof(comm), f);
-    if (rc > 1) {
-        comm[rc - 1] = '\0';
-    } else {
-        fclose(f);
-        return NULL;
-    }
-    fclose(f);
-
-    // Remember to free me please.
-    return strdup(comm);
+    return result;
 }

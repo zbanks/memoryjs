@@ -9,16 +9,22 @@
 
 using v8::Isolate;
 
+
+
 class process {
 public:
   process();
   ~process();
 
+  // This should cover what CrewLink needs from getProcesses
+  struct processStat {
+    pid_t pid = 0;
+    char comm[1024];
+  };
+
   pid_t openProcess(const char* processName, const char** errorMessage);
 
-  std::vector<pid_t> getProcesses(const char** errorMessage);
-
-  char * getProcessName(pid_t processId);
+  std::vector<processStat> getProcesses(const char** errorMessage);
 };
 
 #endif

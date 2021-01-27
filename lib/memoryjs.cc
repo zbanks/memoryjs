@@ -104,31 +104,22 @@ Napi::Value getProcesses(const Napi::CallbackInfo& args) {
   // Define error message that may be set my a function
   const char *errorMessage = "";
 
-  std::vector<pid_t> processPids = Process.getProcesses(&errorMessage);
+  std::vector<process::processStat> processStats = Process.getProcesses(&errorMessage);
 
   if (strcmp(errorMessage, "") && args.Length() != 1) {
     Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
     return env.Null();
   }
 
-  Napi::Array processes = Napi::Array::New(env, processPids.size());
+  Napi::Array processes = Napi::Array::New(env, processStats.size());
 
-  for (std::vector<pid_t>::size_type i = 0; i != processPids.size(); i++) {
+  for (std::vector<pid_t>::size_type i = 0; i != processStats.size(); i++) {
     Napi::Object process = Napi::Object::New(env);
 
-    char *processPath = Process.getProcessName(processPids[i]);
-
-    if (processPath == NULL) {
-      processPath = strdup("unknown");
-    }
-
-    process.Set(Napi::String::New(env, "szExeFile"), Napi::Value::From(env, processPath));
-    process.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, processPids[i]));
+    process.Set(Napi::String::New(env, "szExeFile"), Napi::String::From(env, processStats[i].comm));
+    process.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, processStats[i].pid));
 
     processes.Set(i, process);
-
-    // Free malloc'd memory.
-    free(processPath);
   }
 
   /* getProcesses can either take no arguments or one argument
