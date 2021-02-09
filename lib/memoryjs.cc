@@ -1,4 +1,5 @@
 #include <napi.h>
+#include <cstdlib>
 #include "module.h"
 #include "process.h"
 #include "memoryjs.h"
@@ -84,6 +85,53 @@ Napi::Value openProcess(const Napi::CallbackInfo& args) {
   } else {
     // return JSON
     return processInfo;
+  }
+}
+
+Napi::Value getProcesses(const Napi::CallbackInfo& args) {
+  Napi::Env env = args.Env();
+
+  if (args.Length() > 1) {
+    Napi::Error::New(env, "requires either 0 arguments or 1 argument if a callback is being used").ThrowAsJavaScriptException();
+    return env.Null();
+  }
+
+  if (args.Length() == 1 && !args[0].IsFunction()) {
+    Napi::Error::New(env, "first argument must be a function").ThrowAsJavaScriptException();
+    return env.Null();
+  }
+
+  // Define error message that may be set my a function
+  const char *errorMessage = "";
+
+  std::vector<process::processStat> processStats = Process.getProcesses(&errorMessage);
+
+  if (strcmp(errorMessage, "") && args.Length() != 1) {
+    Napi::Error::New(env, errorMessage).ThrowAsJavaScriptException();
+    return env.Null();
+  }
+
+  Napi::Array processes = Napi::Array::New(env, processStats.size());
+
+  for (std::vector<pid_t>::size_type i = 0; i != processStats.size(); i++) {
+    Napi::Object process = Napi::Object::New(env);
+
+    process.Set(Napi::String::New(env, "szExeFile"), Napi::String::From(env, processStats[i].comm));
+    process.Set(Napi::String::New(env, "th32ProcessID"), Napi::Value::From(env, processStats[i].pid));
+
+    processes.Set(i, process);
+  }
+
+  /* getProcesses can either take no arguments or one argument
+     one argument is for asychronous use (the callback) */
+  if (args.Length() == 1) {
+    // Callback to let the user handle with the information
+    Napi::Function callback = args[0].As<Napi::Function>();
+    callback.Call(env.Global(), { Napi::String::New(env, errorMessage), processes });
+    return env.Null();
+  } else {
+    // return JSON
+    return processes;
   }
 }
 
@@ -359,6 +407,7 @@ Napi::Value readBuffer(const Napi::CallbackInfo& args) {
 
 Napi::Object init(Napi::Env env, Napi::Object exports) {
   exports.Set(Napi::String::New(env, "openProcess"), Napi::Function::New(env, openProcess));
+  exports.Set(Napi::String::New(env, "getProcesses"), Napi::Function::New(env, getProcesses));
   exports.Set(Napi::String::New(env, "closeProcess"), Napi::Function::New(env, closeProcess));
   exports.Set(Napi::String::New(env, "findModule"), Napi::Function::New(env, findModule));
   exports.Set(Napi::String::New(env, "readMemory"), Napi::Function::New(env, readMemory));
